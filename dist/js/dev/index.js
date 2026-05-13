@@ -142,37 +142,37 @@ if (slot) {
   const symbols = [
     {
       id: "red-envelope",
-      src: "./img/slot/01.png",
+      src: "./assets/img/slot/01.png",
       alt: "Red envelope"
     },
     {
       id: "wild-tiger",
-      src: "./img/slot/02.png",
+      src: "./assets/img/slot/02.png",
       alt: "Wild tiger"
     },
     {
       id: "orange",
-      src: "./img/slot/03.png",
+      src: "./assets/img/slot/03.png",
       alt: "Orange"
     },
     {
       id: "firecrackers",
-      src: "./img/slot/04.png",
+      src: "./assets/img/slot/04.png",
       alt: "Firecrackers"
     },
     {
       id: "gold-pot",
-      src: "./img/slot/05.png",
+      src: "./assets/img/slot/05.png",
       alt: "Gold pot"
     },
     {
       id: "drum",
-      src: "./img/slot/06.png",
+      src: "./assets/img/slot/06.png",
       alt: "Drum"
     },
     {
       id: "bear",
-      src: "./img/slot/07.png",
+      src: "./assets/img/slot/07.png",
       alt: "Bear"
     }
   ];
