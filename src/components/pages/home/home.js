@@ -1,4 +1,11 @@
 import "./home.scss"
+import slot01 from "../../../assets/img/slot/01.png"
+import slot02 from "../../../assets/img/slot/02.png"
+import slot03 from "../../../assets/img/slot/03.png"
+import slot04 from "../../../assets/img/slot/04.png"
+import slot05 from "../../../assets/img/slot/05.png"
+import slot06 from "../../../assets/img/slot/06.png"
+import slot07 from "../../../assets/img/slot/07.png"
 const slot = document.querySelector(".slot")
 
 if (slot) {
@@ -11,37 +18,37 @@ if (slot) {
   const symbols = [
     {
       id: "red-envelope",
-      src: "./assets/img/slot/01.png",
+      src: slot01,
       alt: "Red envelope",
     },
     {
       id: "wild-tiger",
-      src: "./assets/img/slot/02.png",
+      src: slot02,
       alt: "Wild tiger",
     },
     {
       id: "orange",
-      src: "./assets/img/slot/03.png",
+      src: slot03,
       alt: "Orange",
     },
     {
       id: "firecrackers",
-      src: "./assets/img/slot/04.png",
+      src: slot04,
       alt: "Firecrackers",
     },
     {
       id: "gold-pot",
-      src: "./assets/img/slot/05.png",
+      src: slot05,
       alt: "Gold pot",
     },
     {
       id: "drum",
-      src: "./assets/img/slot/06.png",
+      src: slot06,
       alt: "Drum",
     },
     {
       id: "bear",
-      src: "./assets/img/slot/07.png",
+      src: slot07,
       alt: "Bear",
     },
   ]
@@ -153,14 +160,10 @@ if (slot) {
   function hideSlotMessage() {
     slotMessage.classList.remove("is-active")
   }
-
   function openRegistrationPopup() {
-    const popup = document.querySelector("#registrationPopup")
+    if (!window.flsPopup) return
 
-    if (!popup) return
-
-    popup.classList.add("is-active")
-    document.body.style.overflow = "hidden"
+    window.flsPopup.open("popup")
   }
 
   async function runOneSpin() {
@@ -207,3 +210,12 @@ if (slot) {
   fillTracksRandom()
   updateCounter()
 }
+// Form connection=================================
+import { initPasswordToggle } from "./password-toggle.js"
+import { initFormValidation } from "./form-validation.js"
+import { initPhoneMask } from "./phone-select.js"
+document.addEventListener("DOMContentLoaded", () => {
+  initPasswordToggle()
+  initFormValidation()
+  initPhoneMask()
+})

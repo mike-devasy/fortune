@@ -4,12 +4,13 @@ position: fixed;
 width: 100%;
 top: 0;
 left: 0;
-		@include adaptiveValue("padding-block", 50, 20);
+		@include adaptiveValue("padding-block", 50, 20, 0, $maxWidthContainer, 1500);
     &__container {
     }
 
     &__logo {
-				  @include adaptiveValue("width", 376, 230);
+				  @include adaptiveValue("width", 376, 235, 0, $maxWidthContainer, 1000);
+					@include adaptiveValue("width", 235, 158, 0, 999, 375);
 
 					margin: 0 auto;
 

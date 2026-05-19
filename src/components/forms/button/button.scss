@@ -3,14 +3,14 @@
 .button {
 	display: inline-flex;
 	border-radius: 11px;
-padding: 24px 90px;
-// @include adaptiveValue("height", 87, 70);
-// @include adaptiveValue("width", 354, 315);
+width: 100%;
+ 
 align-items: center;
-font-weight: 700;
+font-weight: 800;
 font-family: var(--secondaryFont);
 @include adaptiveValue("font-size", 32, 28);
 text-transform: uppercase;
+font-style: italic;
 align-items: center;
 justify-content: center;
 box-shadow: 0 0 42px 0 rgba(252, 98, 0, 0.5), 0 0 14px 0 rgba(252, 98, 0, 0.5), 0 0 6px 0 rgba(252, 98, 0, 0.5);
@@ -27,4 +27,6 @@ span{
 	&--fw {
 		width: 100%;
 	}
+	@include adaptiveValue("padding-block", 24, 12);
+	@include adaptiveValue("padding-inline", 90, 30);
 }
