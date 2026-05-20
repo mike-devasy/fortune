@@ -740,6 +740,11 @@ if (slot) {
   }
   fillTracksRandom();
   updateCounter();
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      runAutoSpins();
+    }, 800);
+  });
 }
 document.addEventListener("DOMContentLoaded", () => {
   initPasswordToggle();
