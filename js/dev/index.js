@@ -1,4 +1,4 @@
-import "./common.min.js";
+import { b as bodyLock, a as bodyUnlock, c as bodyLockStatus } from "./common.min.js";
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) return;
@@ -28,6 +28,308 @@ import "./common.min.js";
     fetch(link.href, fetchOpts);
   }
 })();
+class Popup {
+  constructor(options) {
+    let config = {
+      logging: true,
+      init: true,
+      //Для кнопок
+      attributeOpenButton: "data-fls-popup-link",
+      // Атрибут для кнопки, яка викликає попап
+      attributeCloseButton: "data-fls-popup-close",
+      // Атрибут для кнопки, що закриває попап
+      // Для сторонніх об'єктів
+      fixElementSelector: "[data-fls-lp]",
+      // Атрибут для елементів із лівим паддингом (які fixed)
+      // Для об'єкту попапа
+      attributeMain: "data-fls-popup",
+      youtubeAttribute: "data-fls-popup-youtube",
+      // Атрибут для коду youtube
+      youtubePlaceAttribute: "data-fls-popup-youtube-place",
+      // Атрибут для вставки ролика youtube
+      setAutoplayYoutube: true,
+      // Зміна класів
+      classes: {
+        popup: "popup",
+        // popupWrapper: 'popup__wrapper',
+        popupContent: "data-fls-popup-body",
+        popupActive: "data-fls-popup-active",
+        // Додається для попапа, коли він відкривається
+        bodyActive: "data-fls-popup-open"
+        // Додається для боді, коли попап відкритий
+      },
+      focusCatch: true,
+      // Фокус усередині попапа зациклений
+      closeEsc: true,
+      // Закриття ESC
+      bodyLock: true,
+      // Блокування скролла
+      hashSettings: {
+        location: true,
+        // Хеш в адресному рядку
+        goHash: true
+        // Перехід по наявності в адресному рядку
+      },
+      on: {
+        // Події
+        beforeOpen: function() {
+        },
+        afterOpen: function() {
+        },
+        beforeClose: function() {
+        },
+        afterClose: function() {
+        }
+      }
+    };
+    this.youTubeCode;
+    this.isOpen = false;
+    this.targetOpen = {
+      selector: false,
+      element: false
+    };
+    this.previousOpen = {
+      selector: false,
+      element: false
+    };
+    this.lastClosed = {
+      selector: false,
+      element: false
+    };
+    this._dataValue = false;
+    this.hash = false;
+    this._reopen = false;
+    this._selectorOpen = false;
+    this.lastFocusEl = false;
+    this._focusEl = [
+      "a[href]",
+      'input:not([disabled]):not([type="hidden"]):not([aria-hidden])',
+      "button:not([disabled]):not([aria-hidden])",
+      "select:not([disabled]):not([aria-hidden])",
+      "textarea:not([disabled]):not([aria-hidden])",
+      "area[href]",
+      "iframe",
+      "object",
+      "embed",
+      "[contenteditable]",
+      '[tabindex]:not([tabindex^="-"])'
+    ];
+    this.options = {
+      ...config,
+      ...options,
+      classes: {
+        ...config.classes,
+        ...options?.classes
+      },
+      hashSettings: {
+        ...config.hashSettings,
+        ...options?.hashSettings
+      },
+      on: {
+        ...config.on,
+        ...options?.on
+      }
+    };
+    this.bodyLock = false;
+    this.options.init ? this.initPopups() : null;
+  }
+  initPopups() {
+    this.buildPopup();
+    this.eventsPopup();
+  }
+  buildPopup() {
+  }
+  eventsPopup() {
+    document.addEventListener("click", (function(e) {
+      const buttonOpen = e.target.closest(`[${this.options.attributeOpenButton}]`);
+      if (buttonOpen) {
+        e.preventDefault();
+        this._dataValue = buttonOpen.getAttribute(this.options.attributeOpenButton) ? buttonOpen.getAttribute(this.options.attributeOpenButton) : "error";
+        this.youTubeCode = buttonOpen.getAttribute(this.options.youtubeAttribute) ? buttonOpen.getAttribute(this.options.youtubeAttribute) : null;
+        if (this._dataValue !== "error") {
+          if (!this.isOpen) this.lastFocusEl = buttonOpen;
+          this.targetOpen.selector = `${this._dataValue}`;
+          this._selectorOpen = true;
+          this.open();
+          return;
+        }
+        return;
+      }
+      const buttonClose = e.target.closest(`[${this.options.attributeCloseButton}]`);
+      if (buttonClose || !e.target.closest(`[${this.options.classes.popupContent}]`) && this.isOpen) {
+        e.preventDefault();
+        this.close();
+        return;
+      }
+    }).bind(this));
+    document.addEventListener("keydown", (function(e) {
+      if (this.options.closeEsc && e.which == 27 && e.code === "Escape" && this.isOpen) {
+        e.preventDefault();
+        this.close();
+        return;
+      }
+      if (this.options.focusCatch && e.which == 9 && this.isOpen) {
+        this._focusCatch(e);
+        return;
+      }
+    }).bind(this));
+    if (this.options.hashSettings.goHash) {
+      window.addEventListener("hashchange", (function() {
+        if (window.location.hash) {
+          this._openToHash();
+        } else {
+          this.close(this.targetOpen.selector);
+        }
+      }).bind(this));
+      if (window.location.hash) {
+        this._openToHash();
+      }
+    }
+  }
+  open(selectorValue) {
+    if (bodyLockStatus) {
+      this.bodyLock = document.documentElement.hasAttribute("data-fls-scrolllock") && !this.isOpen ? true : false;
+      if (selectorValue && typeof selectorValue === "string" && selectorValue.trim() !== "") {
+        this.targetOpen.selector = selectorValue;
+        this._selectorOpen = true;
+      }
+      if (this.isOpen) {
+        this._reopen = true;
+        this.close();
+      }
+      if (!this._selectorOpen) this.targetOpen.selector = this.lastClosed.selector;
+      if (!this._reopen) this.previousActiveElement = document.activeElement;
+      this.targetOpen.element = document.querySelector(`[${this.options.attributeMain}=${this.targetOpen.selector}]`);
+      if (this.targetOpen.element) {
+        const codeVideo = this.youTubeCode || this.targetOpen.element.getAttribute(`${this.options.youtubeAttribute}`);
+        if (codeVideo) {
+          const urlVideo = `https://www.youtube.com/embed/${codeVideo}?rel=0&showinfo=0&autoplay=1`;
+          const iframe = document.createElement("iframe");
+          const autoplay = this.options.setAutoplayYoutube ? "autoplay;" : "";
+          iframe.setAttribute("allowfullscreen", "");
+          iframe.setAttribute("allow", `${autoplay}; encrypted-media`);
+          iframe.setAttribute("src", urlVideo);
+          if (!this.targetOpen.element.querySelector(`[${this.options.youtubePlaceAttribute}]`)) {
+            this.targetOpen.element.querySelector("[data-fls-popup-content]").setAttribute(`${this.options.youtubePlaceAttribute}`, "");
+          }
+          this.targetOpen.element.querySelector(`[${this.options.youtubePlaceAttribute}]`).appendChild(iframe);
+        }
+        if (this.options.hashSettings.location) {
+          this._getHash();
+          this._setHash();
+        }
+        this.options.on.beforeOpen(this);
+        document.dispatchEvent(new CustomEvent("beforePopupOpen", {
+          detail: {
+            popup: this
+          }
+        }));
+        this.targetOpen.element.setAttribute(this.options.classes.popupActive, "");
+        document.documentElement.setAttribute(this.options.classes.bodyActive, "");
+        if (!this._reopen) {
+          !this.bodyLock ? bodyLock() : null;
+        } else this._reopen = false;
+        this.targetOpen.element.setAttribute("aria-hidden", "false");
+        this.previousOpen.selector = this.targetOpen.selector;
+        this.previousOpen.element = this.targetOpen.element;
+        this._selectorOpen = false;
+        this.isOpen = true;
+        setTimeout(() => {
+          this._focusTrap();
+        }, 50);
+        this.options.on.afterOpen(this);
+        document.dispatchEvent(new CustomEvent("afterPopupOpen", {
+          detail: {
+            popup: this
+          }
+        }));
+      }
+    }
+  }
+  close(selectorValue) {
+    if (selectorValue && typeof selectorValue === "string" && selectorValue.trim() !== "") {
+      this.previousOpen.selector = selectorValue;
+    }
+    if (!this.isOpen || !bodyLockStatus) {
+      return;
+    }
+    this.options.on.beforeClose(this);
+    document.dispatchEvent(new CustomEvent("beforePopupClose", {
+      detail: {
+        popup: this
+      }
+    }));
+    if (this.targetOpen.element.querySelector(`[${this.options.youtubePlaceAttribute}]`)) {
+      setTimeout(() => {
+        this.targetOpen.element.querySelector(`[${this.options.youtubePlaceAttribute}]`).innerHTML = "";
+      }, 500);
+    }
+    this.previousOpen.element.removeAttribute(this.options.classes.popupActive);
+    this.previousOpen.element.setAttribute("aria-hidden", "true");
+    if (!this._reopen) {
+      document.documentElement.removeAttribute(this.options.classes.bodyActive);
+      !this.bodyLock ? bodyUnlock() : null;
+      this.isOpen = false;
+    }
+    this._removeHash();
+    if (this._selectorOpen) {
+      this.lastClosed.selector = this.previousOpen.selector;
+      this.lastClosed.element = this.previousOpen.element;
+    }
+    this.options.on.afterClose(this);
+    document.dispatchEvent(new CustomEvent("afterPopupClose", {
+      detail: {
+        popup: this
+      }
+    }));
+    setTimeout(() => {
+      this._focusTrap();
+    }, 50);
+  }
+  // Отримання хешу 
+  _getHash() {
+    if (this.options.hashSettings.location) {
+      this.hash = `#${this.targetOpen.selector}`;
+    }
+  }
+  _openToHash() {
+    let classInHash = window.location.hash.replace("#", "");
+    const openButton = document.querySelector(`[${this.options.attributeOpenButton}="${classInHash}"]`);
+    if (openButton) {
+      this.youTubeCode = openButton.getAttribute(this.options.youtubeAttribute) ? openButton.getAttribute(this.options.youtubeAttribute) : null;
+    }
+    if (classInHash) this.open(classInHash);
+  }
+  // Встановлення хеша
+  _setHash() {
+    history.pushState("", "", this.hash);
+  }
+  _removeHash() {
+    history.pushState("", "", window.location.href.split("#")[0]);
+  }
+  _focusCatch(e) {
+    const focusable = this.targetOpen.element.querySelectorAll(this._focusEl);
+    const focusArray = Array.prototype.slice.call(focusable);
+    const focusedIndex = focusArray.indexOf(document.activeElement);
+    if (e.shiftKey && focusedIndex === 0) {
+      focusArray[focusArray.length - 1].focus();
+      e.preventDefault();
+    }
+    if (!e.shiftKey && focusedIndex === focusArray.length - 1) {
+      focusArray[0].focus();
+      e.preventDefault();
+    }
+  }
+  _focusTrap() {
+    const focusable = this.previousOpen.element.querySelectorAll(this._focusEl);
+    if (!this.isOpen && this.lastFocusEl) {
+      this.lastFocusEl.focus();
+    } else {
+      focusable[0].focus();
+    }
+  }
+}
+document.querySelector("[data-fls-popup]") ? window.addEventListener("load", () => window.flsPopup = new Popup({})) : null;
 function headerScroll() {
   const header = document.querySelector("[data-fls-header-scroll]");
   const headerShow = header.hasAttribute("data-fls-header-scroll-show");
@@ -60,122 +362,387 @@ function headerScroll() {
   });
 }
 document.querySelector("[data-fls-header-scroll]") ? window.addEventListener("load", headerScroll) : null;
-class DynamicAdapt {
-  constructor() {
-    this.type = "max";
-    this.init();
-  }
-  init() {
-    this.objects = [];
-    this.daClassname = "--dynamic";
-    this.nodes = [...document.querySelectorAll("[data-fls-dynamic]")];
-    this.nodes.forEach((node) => {
-      const data = node.dataset.flsDynamic.trim();
-      const dataArray = data.split(`,`);
-      const object = {};
-      object.element = node;
-      object.parent = node.parentNode;
-      object.destinationParent = dataArray[3] ? node.closest(dataArray[3].trim()) || document : document;
-      dataArray[3] ? dataArray[3].trim() : null;
-      const objectSelector = dataArray[0] ? dataArray[0].trim() : null;
-      if (objectSelector) {
-        const foundDestination = object.destinationParent.querySelector(objectSelector);
-        if (foundDestination) {
-          object.destination = foundDestination;
-        }
-      }
-      object.breakpoint = dataArray[1] ? dataArray[1].trim() : `767.98`;
-      object.place = dataArray[2] ? dataArray[2].trim() : `last`;
-      object.index = this.indexInParent(object.parent, object.element);
-      this.objects.push(object);
-    });
-    this.arraySort(this.objects);
-    this.mediaQueries = this.objects.map(({ breakpoint }) => `(${this.type}-width: ${breakpoint / 16}em),${breakpoint}`).filter((item, index, self) => self.indexOf(item) === index);
-    this.mediaQueries.forEach((media) => {
-      const mediaSplit = media.split(",");
-      const matchMedia = window.matchMedia(mediaSplit[0]);
-      const mediaBreakpoint = mediaSplit[1];
-      const objectsFilter = this.objects.filter(({ breakpoint }) => breakpoint === mediaBreakpoint);
-      matchMedia.addEventListener("change", () => {
-        this.mediaHandler(matchMedia, objectsFilter);
-      });
-      this.mediaHandler(matchMedia, objectsFilter);
-    });
-  }
-  mediaHandler(matchMedia, objects) {
-    if (matchMedia.matches) {
-      objects.forEach((object) => {
-        if (object.destination) {
-          this.moveTo(object.place, object.element, object.destination);
-        }
-      });
-    } else {
-      objects.forEach(({ parent, element, index }) => {
-        if (element.classList.contains(this.daClassname)) {
-          this.moveBack(parent, element, index);
-        }
-      });
-    }
-  }
-  moveTo(place, element, destination) {
-    element.classList.add(this.daClassname);
-    const index = place === "last" || place === "first" ? place : parseInt(place, 10);
-    if (index === "last" || index >= destination.children.length) {
-      destination.append(element);
-    } else if (index === "first") {
-      destination.prepend(element);
-    } else {
-      destination.children[index].before(element);
-    }
-  }
-  moveBack(parent, element, index) {
-    element.classList.remove(this.daClassname);
-    if (parent.children[index] !== void 0) {
-      parent.children[index].before(element);
-    } else {
-      parent.append(element);
-    }
-  }
-  indexInParent(parent, element) {
-    return [...parent.children].indexOf(element);
-  }
-  arraySort(arr) {
-    if (this.type === "min") {
-      arr.sort((a, b) => {
-        if (a.breakpoint === b.breakpoint) {
-          if (a.place === b.place) {
-            return 0;
-          }
-          if (a.place === "first" || b.place === "last") {
-            return -1;
-          }
-          if (a.place === "last" || b.place === "first") {
-            return 1;
-          }
-          return 0;
-        }
-        return a.breakpoint - b.breakpoint;
-      });
-    } else {
-      arr.sort((a, b) => {
-        if (a.breakpoint === b.breakpoint) {
-          if (a.place === b.place) {
-            return 0;
-          }
-          if (a.place === "first" || b.place === "last") {
-            return 1;
-          }
-          if (a.place === "last" || b.place === "first") {
-            return -1;
-          }
-          return 0;
-        }
-        return b.breakpoint - a.breakpoint;
-      });
+const slot01 = "" + new URL("../assets/img/slot/01.png", import.meta.url).href;
+const slot02 = "" + new URL("../assets/img/slot/02.png", import.meta.url).href;
+const slot03 = "" + new URL("../assets/img/slot/03.png", import.meta.url).href;
+const slot04 = "" + new URL("../assets/img/slot/04.png", import.meta.url).href;
+const slot05 = "" + new URL("../assets/img/slot/05.png", import.meta.url).href;
+const slot06 = "" + new URL("../assets/img/slot/06.png", import.meta.url).href;
+const slot07 = "" + new URL("../assets/img/slot/07.png", import.meta.url).href;
+function initPasswordToggle() {
+  const toggles = document.querySelectorAll(".field__toggle");
+  toggles.forEach((toggle) => {
+    const field = toggle.closest(".field");
+    const passwordInput = field?.querySelector('input[type="password"], input[type="text"]');
+    if (!passwordInput) {
       return;
     }
+    toggle.addEventListener("click", () => {
+      const isPassword = passwordInput.type === "password";
+      passwordInput.type = isPassword ? "text" : "password";
+      toggle.setAttribute("aria-label", isPassword ? "Hide password" : "Show password");
+    });
+  });
+}
+const SUBMIT_LABEL_DEFAULT = "Sign Up";
+const SUBMIT_LABEL_PENDING = "Submitting...";
+const SUBMIT_ERROR_MESSAGE = "Adapter is not connected yet.";
+const setSubmitButtonState = (button, isPending) => {
+  if (!button) {
+    return;
+  }
+  const labelNode = button.querySelector(".register-form__submit-text");
+  if (labelNode) {
+    labelNode.textContent = isPending ? SUBMIT_LABEL_PENDING : SUBMIT_LABEL_DEFAULT;
+  } else {
+    button.textContent = isPending ? SUBMIT_LABEL_PENDING : SUBMIT_LABEL_DEFAULT;
+  }
+  button.disabled = isPending;
+  button.classList.toggle("is-loading", isPending);
+};
+async function handleFormSubmit(form) {
+  const submitButton = form.querySelector(".register-form__submit");
+  const errorBlock = form.querySelector("#register-form-error");
+  const formData = new FormData(form);
+  const data = Object.fromEntries(formData.entries());
+  const adapter = window.patrickLandingAdapter;
+  setSubmitButtonState(submitButton, true);
+  if (errorBlock) {
+    errorBlock.hidden = true;
+    errorBlock.textContent = "";
+  }
+  try {
+    if (!adapter || typeof adapter.submit !== "function") {
+      throw new Error("Missing adapter");
+    }
+    const response = await adapter.submit(data, { form });
+    if (response?.redirectUrl) {
+      window.location.assign(response.redirectUrl);
+    }
+  } catch (error) {
+    if (errorBlock) {
+      errorBlock.hidden = false;
+      errorBlock.textContent = SUBMIT_ERROR_MESSAGE;
+    }
+  } finally {
+    setSubmitButtonState(submitButton, false);
   }
 }
-if (document.querySelector("[data-fls-dynamic]")) {
-  window.addEventListener("load", () => window.flsDynamic = new DynamicAdapt());
+const AR_COUNTRY_CODE = "54";
+const AR_PHONE_PREFIX = `+${AR_COUNTRY_CODE} `;
+const AR_LOCAL_PHONE_LENGTH = 10;
+const getPhoneLocalDigits = (phoneNumber = "") => {
+  const digits = String(phoneNumber).replace(/\D/g, "");
+  return digits.startsWith(AR_COUNTRY_CODE) ? digits.slice(AR_COUNTRY_CODE.length) : digits;
+};
+const isValidArPhone = (phoneNumber = "") => getPhoneLocalDigits(phoneNumber).length === AR_LOCAL_PHONE_LENGTH;
+const normalizePhone = (phoneNumber = "") => {
+  const localDigits = getPhoneLocalDigits(phoneNumber);
+  return localDigits ? `+${AR_COUNTRY_CODE}${localDigits}` : "";
+};
+function initFormValidation() {
+  const form = document.querySelector("#register-form");
+  if (!form) return;
+  const phone = form.elements.phone;
+  const email = form.elements.email;
+  const password = form.elements.password;
+  const isAdult = form.elements.isAdult;
+  const serverError = form.querySelector("#register-form-error");
+  let hasAttemptedSubmit = false;
+  const fieldInputs = [phone, email, password];
+  const setFieldErrorVisibility = (input, isValid, shouldShow = false) => {
+    const field = input?.closest(".field");
+    const error = field?.querySelector(".field__error");
+    if (!field) return;
+    field.classList.toggle("field--invalid", shouldShow && !isValid);
+    if (error) {
+      error.classList.toggle("shown", shouldShow && !isValid);
+    }
+  };
+  const setCheckboxErrorVisibility = (input, isValid, shouldShow = false) => {
+    const field = input?.closest(".check");
+    const error = field?.querySelector(".field__error");
+    if (!field) return;
+    field.classList.toggle("field--invalid", shouldShow && !isValid);
+    if (error) {
+      error.classList.toggle("shown", shouldShow && !isValid);
+    }
+  };
+  const validateInput = (input, shouldShow = false) => {
+    let isValid = false;
+    if (input === phone) {
+      isValid = isValidArPhone(phone.value);
+    }
+    if (input === email) {
+      const value = email.value.trim();
+      isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+    if (input === password) {
+      isValid = password.value.trim().length >= 8;
+    }
+    setFieldErrorVisibility(input, isValid, shouldShow);
+    return isValid;
+  };
+  const validateCheckbox = (shouldShow = false) => {
+    const isValid = Boolean(isAdult?.checked);
+    setCheckboxErrorVisibility(isAdult, isValid, shouldShow);
+    return isValid;
+  };
+  const validateForm = (shouldShow = false) => {
+    const fieldsValid = fieldInputs.map((input) => validateInput(input, shouldShow)).every(Boolean);
+    const checkboxValid = validateCheckbox(shouldShow);
+    return fieldsValid && checkboxValid;
+  };
+  fieldInputs.forEach((input) => {
+    input.addEventListener("input", () => {
+      if (serverError) {
+        serverError.hidden = true;
+        serverError.textContent = "";
+      }
+      validateForm(hasAttemptedSubmit);
+    });
+    input.addEventListener("blur", () => {
+      validateForm(hasAttemptedSubmit);
+    });
+  });
+  if (isAdult) {
+    isAdult.addEventListener("change", () => {
+      validateForm(hasAttemptedSubmit);
+    });
+  }
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    hasAttemptedSubmit = true;
+    const isFormValid = validateForm(true);
+    if (!isFormValid) return;
+    if (phone) {
+      phone.value = normalizePhone(phone.value);
+    }
+    await handleFormSubmit(form);
+  });
+  validateForm();
 }
+function initPhoneMask() {
+  const phoneInput = document.querySelector('input[name="phone"]');
+  if (!phoneInput) {
+    return;
+  }
+  if (typeof window.IMask !== "function") {
+    return;
+  }
+  const mask = window.IMask(phoneInput, {
+    mask: "+{54} (000) 000 - 0000"
+  });
+  const getPrefixLength = () => AR_PHONE_PREFIX.length;
+  const clampCaretToPrefix = () => {
+    const prefixLength = getPrefixLength();
+    window.requestAnimationFrame(() => {
+      const selectionStart = phoneInput.selectionStart ?? prefixLength;
+      const selectionEnd = phoneInput.selectionEnd ?? prefixLength;
+      if (selectionStart < prefixLength || selectionEnd < prefixLength) {
+        phoneInput.setSelectionRange(prefixLength, prefixLength);
+      }
+    });
+  };
+  const hasLocalDigits = () => getPhoneLocalDigits(mask.value).length > 0;
+  const ensurePrefixWhileFocused = () => {
+    if (document.activeElement !== phoneInput) {
+      return;
+    }
+    if (!hasLocalDigits()) {
+      mask.value = AR_PHONE_PREFIX;
+    }
+    clampCaretToPrefix();
+  };
+  phoneInput.addEventListener("focus", () => {
+    if (!mask.value.trim()) {
+      mask.value = AR_PHONE_PREFIX;
+      phoneInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    clampCaretToPrefix();
+  });
+  phoneInput.addEventListener("blur", () => {
+    if (!hasLocalDigits()) {
+      mask.value = "";
+      phoneInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+  phoneInput.addEventListener("click", clampCaretToPrefix);
+  phoneInput.addEventListener("input", () => {
+    ensurePrefixWhileFocused();
+  });
+  phoneInput.addEventListener("keyup", () => {
+    ensurePrefixWhileFocused();
+  });
+  phoneInput.addEventListener("keydown", (event) => {
+    const prefixLength = getPrefixLength();
+    const selectionStart = phoneInput.selectionStart ?? prefixLength;
+    const selectionEnd = phoneInput.selectionEnd ?? prefixLength;
+    const isPrefixSelected = selectionStart < prefixLength;
+    if (event.key === "Backspace" && selectionStart <= prefixLength && selectionEnd <= prefixLength || event.key === "Delete" && isPrefixSelected) {
+      event.preventDefault();
+      phoneInput.setSelectionRange(prefixLength, prefixLength);
+    }
+  });
+}
+const slot = document.querySelector(".slot");
+if (slot) {
+  let wait = function(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }, getRandomSymbol = function() {
+    const randomIndex = Math.floor(Math.random() * symbols.length);
+    return symbols[randomIndex];
+  }, createSlotItem = function(symbol) {
+    return `
+      <div class="slot__item">
+        <img src="${symbol.src}" alt="${symbol.alt}">
+      </div>
+    `;
+  }, fillTracksRandom = function() {
+    tracks.forEach((track) => {
+      let html = "";
+      for (let i = 0; i < itemsPerReel; i++) {
+        html += createSlotItem(getRandomSymbol());
+      }
+      track.innerHTML = html;
+      track.style.transition = "none";
+      track.style.transform = "translateY(0)";
+    });
+  }, fillTracksWithWinSymbol = function(winSymbol) {
+    const stopIndex = itemsPerReel - 3;
+    tracks.forEach((track) => {
+      let html = "";
+      for (let i = 0; i < itemsPerReel; i++) {
+        const symbol = i === stopIndex ? winSymbol : getRandomSymbol();
+        html += createSlotItem(symbol);
+      }
+      track.innerHTML = html;
+      track.style.transition = "none";
+      track.style.transform = "translateY(0)";
+    });
+  }, spinReel = function(track, reelIndex) {
+    return new Promise((resolve) => {
+      const firstItem = track.querySelector(".slot__item");
+      if (!firstItem) {
+        resolve();
+        return;
+      }
+      const realItemHeight = firstItem.offsetHeight;
+      const stopIndex = itemsPerReel - 3;
+      const offset = stopIndex * realItemHeight;
+      const duration = 1.1 + reelIndex * 0.25;
+      track.style.transition = "none";
+      track.style.transform = "translateY(0)";
+      track.offsetHeight;
+      requestAnimationFrame(() => {
+        track.style.transition = `transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1)`;
+        track.style.transform = `translateY(-${offset}px)`;
+      });
+      setTimeout(
+        () => {
+          resolve();
+        },
+        duration * 1e3 + 150
+      );
+    });
+  }, updateCounter = function() {
+    const spinsLeft = totalSpins - currentSpin;
+    spinCounter.textContent = `${spinsLeft}/4`;
+  }, showSlotMessage = function(text) {
+    slotMessageText.textContent = text;
+    slotMessage.classList.add("is-active");
+  }, hideSlotMessage = function() {
+    slotMessage.classList.remove("is-active");
+  }, openRegistrationPopup = function() {
+    if (!window.flsPopup) return;
+    window.flsPopup.open("popup");
+  };
+  const tracks = slot.querySelectorAll(".slot__track");
+  const spinButton = document.querySelector("#spinButton");
+  const spinCounter = document.querySelector("#spinCounter");
+  const slotMessage = slot.querySelector("#slotMessage");
+  const slotMessageText = slot.querySelector("#slotMessageText");
+  const symbols = [
+    {
+      id: "red-envelope",
+      src: slot01,
+      alt: "Red envelope"
+    },
+    {
+      id: "wild-tiger",
+      src: slot02,
+      alt: "Wild tiger"
+    },
+    {
+      id: "orange",
+      src: slot03,
+      alt: "Orange"
+    },
+    {
+      id: "firecrackers",
+      src: slot04,
+      alt: "Firecrackers"
+    },
+    {
+      id: "gold-pot",
+      src: slot05,
+      alt: "Gold pot"
+    },
+    {
+      id: "drum",
+      src: slot06,
+      alt: "Drum"
+    },
+    {
+      id: "bear",
+      src: slot07,
+      alt: "Bear"
+    }
+  ];
+  const totalSpins = 4;
+  const itemsPerReel = 13;
+  let currentSpin = 0;
+  let isAutoSpinning = false;
+  const spinMessages = [
+    "You won 4 free spins",
+    "You won no-cash bonus",
+    "You won more free spins",
+    "You won cashback"
+  ];
+  async function runOneSpin() {
+    hideSlotMessage();
+    const winSymbol = getRandomSymbol();
+    fillTracksWithWinSymbol(winSymbol);
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    currentSpin += 1;
+    updateCounter();
+    await Promise.all([...tracks].map((track, index) => spinReel(track, index)));
+    showSlotMessage(spinMessages[currentSpin - 1]);
+    await wait(1200);
+  }
+  async function runAutoSpins() {
+    if (isAutoSpinning) return;
+    isAutoSpinning = true;
+    if (spinButton) {
+      spinButton.disabled = true;
+    }
+    currentSpin = 0;
+    updateCounter();
+    for (let i = 0; i < totalSpins; i++) {
+      await runOneSpin();
+    }
+    await wait(500);
+    openRegistrationPopup();
+    isAutoSpinning = false;
+  }
+  if (spinButton) {
+    spinButton.addEventListener("click", runAutoSpins);
+  }
+  fillTracksRandom();
+  updateCounter();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  initPasswordToggle();
+  initFormValidation();
+  initPhoneMask();
+});
