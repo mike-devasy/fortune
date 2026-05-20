@@ -1,3 +1,5 @@
+/** @format */
+
 import "./home.scss"
 import slot01 from "../../../assets/img/slot/01.png"
 import slot02 from "../../../assets/img/slot/02.png"
@@ -188,8 +190,11 @@ if (slot) {
   async function runAutoSpins() {
     if (isAutoSpinning) return
 
-    isAutoSpinning = true
-    spinButton.disabled = true
+		isAutoSpinning = true
+		if (spinButton) {
+      spinButton.disabled = true
+    }
+    // spinButton.disabled = true
 
     currentSpin = 0
     updateCounter()
@@ -204,11 +209,18 @@ if (slot) {
 
     isAutoSpinning = false
   }
-
+if (spinButton) {
   spinButton.addEventListener("click", runAutoSpins)
+}
+  // spinButton.addEventListener("click", runAutoSpins)
 
   fillTracksRandom()
-  updateCounter()
+	updateCounter()
+	window.addEventListener("load", () => {
+    setTimeout(() => {
+      runAutoSpins()
+    }, 800)
+  })
 }
 // Form connection=================================
 import { initPasswordToggle } from "./password-toggle.js"

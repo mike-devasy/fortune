@@ -723,7 +723,9 @@ if (slot) {
   async function runAutoSpins() {
     if (isAutoSpinning) return;
     isAutoSpinning = true;
-    spinButton.disabled = true;
+    if (spinButton) {
+      spinButton.disabled = true;
+    }
     currentSpin = 0;
     updateCounter();
     for (let i = 0; i < totalSpins; i++) {
@@ -733,9 +735,16 @@ if (slot) {
     openRegistrationPopup();
     isAutoSpinning = false;
   }
-  spinButton.addEventListener("click", runAutoSpins);
+  if (spinButton) {
+    spinButton.addEventListener("click", runAutoSpins);
+  }
   fillTracksRandom();
   updateCounter();
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      runAutoSpins();
+    }, 800);
+  });
 }
 document.addEventListener("DOMContentLoaded", () => {
   initPasswordToggle();
